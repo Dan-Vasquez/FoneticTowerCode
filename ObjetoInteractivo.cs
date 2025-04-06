@@ -36,38 +36,6 @@ public class ObjetoInteractivo : MonoBehaviour
     }
 
     /// <summary>
-    /// Aplica un efecto de parpadeo múltiple al objeto
-    /// </summary>
-    /// <param name="repeticiones">Número de veces que parpadeará</param>
-    /// <param name="intervalo">Tiempo entre parpadeos</param>
-    public void AplicarParpadeoMultiple(int repeticiones, float intervalo)
-    {
-        StartCoroutine(ParpadeoContinuo(repeticiones, intervalo));
-    }
-
-    /// <summary>
-    /// Corrutina que maneja el efecto de parpadeo continuo
-    /// </summary>
-    /// <param name="repeticiones">Número de repeticiones del parpadeo</param>
-    /// <param name="intervalo">Intervalo entre estados de parpadeo</param>
-    private IEnumerator ParpadeoContinuo(int repeticiones, float intervalo)
-    {
-        for (int i = 0; i < repeticiones; i++)
-        {
-            // Activar outline
-            AplicarOutline();
-            yield return new WaitForSeconds(intervalo / 2);
-
-            // Desactivar outline (necesitarás implementar esta función)
-            QuitarOutline();
-            yield return new WaitForSeconds(intervalo / 2);
-        }
-
-        // Dejarlo activado al final
-        AplicarOutline();
-    }
-
-    /// <summary>
     /// Quita el efecto de outline del objeto
     /// </summary>
     public void QuitarOutline()
