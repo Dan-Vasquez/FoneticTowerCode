@@ -1,41 +1,59 @@
-/*
- * GeneradorObjetos.cs
- * 
- * Este script se encarga de la generación y gestión de objetos interactivos en el juego.
- * Permite crear instancias de objetos en puntos específicos con propiedades configurables.
- * 
- * Características principales:
- * - Generación automática de objetos en puntos predefinidos
- * - Control de cantidad máxima de objetos
- * - Gestión del ciclo de vida de los objetos
- * - Configuración de propiedades de objetos interactivos
- */
-
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// Controla la generación automática de objetos interactivos en puntos específicos del espacio.
+/// Este componente permite generar objetos de forma periódica hasta alcanzar una cantidad máxima definida.
+/// </summary>
 public class GeneradorObjetos : MonoBehaviour
 {
-    // Prefab base que se va a instanciar
+    /// <summary>
+    /// Prefab base que será instanciado en los puntos de generación.
+    /// Este prefab debe contener o ser compatible con el componente ObjetoInteractivo.
+    /// </summary>
     public GameObject prefabBase;
     
     // Configuración del ObjetoInteractivo
     [Header("Configuración del Objeto Interactivo")]
+    /// <summary>
+    /// Categoría del objeto interactivo que se generará.
+    /// </summary>
     public int categoria;
+
+    /// <summary>
+    /// Nombre identificativo del objeto que se generará.
+    /// </summary>
     public string nombreObjeto;
     
     // Configuración del generador
     [Header("Configuración de Generación")]
+    /// <summary>
+    /// Número máximo de objetos que pueden existir simultáneamente.
+    /// </summary>
     public int cantidadMaxima = 3;
+
+    /// <summary>
+    /// Array de transforms que definen las posiciones donde se pueden generar objetos.
+    /// </summary>
     public Transform[] puntosDeGeneracion;
+
+    /// <summary>
+    /// Tiempo en segundos entre cada intento de generación de objetos.
+    /// </summary>
     public float tiempoEntreGeneraciones = 5f;
     
-    // Control interno
+    /// <summary>
+    /// Lista que mantiene el registro de todos los objetos generados actualmente.
+    /// </summary>
     private List<GameObject> objetosGenerados = new List<GameObject>();
+
+    /// <summary>
+    /// Contador interno para controlar el tiempo entre generaciones.
+    /// </summary>
     private float temporizador;
     
     /// <summary>
-    /// Inicializa el generador y configura el temporizador inicial
+    /// Inicializa el temporizador al comenzar.
     /// </summary>
     void Start()
     {
@@ -43,7 +61,7 @@ public class GeneradorObjetos : MonoBehaviour
     }
     
     /// <summary>
-    /// Actualiza el estado del generador, limpia objetos destruidos y genera nuevos según sea necesario
+    /// Actualiza el estado del generador cada frame, controlando la generación automática de objetos.
     /// </summary>
     void Update()
     {
@@ -64,8 +82,7 @@ public class GeneradorObjetos : MonoBehaviour
     }
     
     /// <summary>
-    /// Genera un nuevo objeto interactivo en uno de los puntos de generación disponibles
-    /// Configura sus propiedades y componentes según los parámetros establecidos
+    /// Genera un nuevo objeto si no se ha alcanzado el límite máximo.
     /// </summary>
     public void GenerarObjeto()
     {
@@ -76,7 +93,7 @@ public class GeneradorObjetos : MonoBehaviour
         // Verificar si tenemos puntos de generación
         if (puntosDeGeneracion == null || puntosDeGeneracion.Length == 0)
         {
-            Debug.LogWarning("No hay puntos de generación configurados para " + nombreObjeto);
+            Debug.LogWarning($"No hay puntos de generación configurados para {nombreObjeto}");
             return;
         }
         
@@ -95,18 +112,18 @@ public class GeneradorObjetos : MonoBehaviour
             Debug.Log("Se ha añadido el componente ObjetoInteractivo al objeto generado");
         }
         
-        // Configurar el ObjetoInteractivo
+        // Configurar el ObjetoInteractivo (ahora estamos seguros de que existe)
         interactivo.categoria = this.categoria;
         interactivo.nombreObjeto = this.nombreObjeto;
         
         // Añadir a la lista de objetos generados
         objetosGenerados.Add(nuevoObjeto);
         
-        Debug.Log("Objeto " + nombreObjeto + " generado con éxito. Total actual: " + objetosGenerados.Count);
+        Debug.Log($"Objeto {nombreObjeto} generado con éxito. Total actual: {objetosGenerados.Count}");
     }
     
     /// <summary>
-    /// Genera objetos hasta alcanzar el límite máximo establecido
+    /// Genera objetos hasta alcanzar el límite máximo establecido.
     /// </summary>
     public void GenerarHastaLimite()
     {
@@ -117,7 +134,7 @@ public class GeneradorObjetos : MonoBehaviour
     }
     
     /// <summary>
-    /// Elimina todos los objetos generados y limpia la lista de referencias
+    /// Destruye todos los objetos generados y limpia la lista.
     /// </summary>
     public void LimpiarObjetos()
     {

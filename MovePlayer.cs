@@ -1,32 +1,48 @@
-/*
- * MovePlayer.cs
- * 
- * Este script controla el movimiento del jugador en primera persona.
- * Implementa movimiento básico, salto y aplicación de gravedad.
- * 
- * Características principales:
- * - Movimiento en todas direcciones
- * - Sistema de salto
- * - Aplicación de gravedad
- * - Detección de suelo
- */
-
 using UnityEngine;
 
+/// <summary>
+/// Controla el movimiento del jugador utilizando el sistema de CharacterController de Unity.
+/// Permite el movimiento en todas las direcciones, salto y aplica gravedad.
+/// </summary>
 public class PlayerMove : MonoBehaviour
 {
-    // Variables para el movimiento del jugador
+    /// <summary>
+    /// Velocidad de movimiento del jugador en unidades por segundo.
+    /// </summary>
     public float moveSpeed = 5f;
+
+    /// <summary>
+    /// Fuerza inicial aplicada al salto del jugador.
+    /// Un valor más alto resulta en saltos más altos.
+    /// </summary>
     public float jumpForce = 5f;
+
+    /// <summary>
+    /// Fuerza de gravedad aplicada al jugador.
+    /// Por defecto usa el valor aproximado de la gravedad terrestre.
+    /// </summary>
     public float gravity = 9.8f;
 
-    // Variable para verificar si el jugador est en el suelo
+    /// <summary>
+    /// Indica si el jugador está tocando el suelo.
+    /// Se actualiza cada frame usando el CharacterController.
+    /// </summary>
     private bool isGrounded;
+
+    /// <summary>
+    /// Vector de velocidad actual del jugador.
+    /// Se usa principalmente para el cálculo de la gravedad y el salto.
+    /// </summary>
     private Vector3 velocity;
+
+    /// <summary>
+    /// Referencia al componente CharacterController que maneja las colisiones
+    /// y el movimiento físico del jugador.
+    /// </summary>
     private CharacterController controller;
 
     /// <summary>
-    /// Inicializa el controlador del jugador
+    /// Inicializa las referencias necesarias al comenzar.
     /// </summary>
     void Start()
     {
@@ -35,12 +51,12 @@ public class PlayerMove : MonoBehaviour
     }
 
     /// <summary>
-    /// Actualiza el movimiento del jugador basado en el input
-    /// Maneja el salto y aplica la gravedad
+    /// Actualiza el movimiento del jugador cada frame.
+    /// Procesa las entradas del usuario y aplica física básica.
     /// </summary>
     void Update()
     {
-        // Verificar si el jugador est en el suelo
+        // Verificar si el jugador está en el suelo
         isGrounded = controller.isGrounded;
 
         if (isGrounded && velocity.y < 0)

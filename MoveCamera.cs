@@ -1,40 +1,42 @@
-/*
- * MoveCamera.cs
- * 
- * Este script controla el movimiento de la cámara en primera persona.
- * Permite la rotación de la cámara basada en el movimiento del ratón y sigue al jugador.
- * 
- * Características principales:
- * - Rotación suave de la cámara
- * - Seguimiento del jugador
- * - Control de sensibilidad del ratón
- * - Limitación de ángulos de rotación vertical
- */
-
 using UnityEngine;
 
+/// <summary>
+/// Controla el movimiento de la cámara en primera persona.
+/// Permite la rotación de la cámara basada en el movimiento del ratón y
+/// sigue al jugador, implementando un sistema de vista en primera persona.
+/// </summary>
 public class CameraController : MonoBehaviour
 {
-    // Objetivo a seguir (el jugador)
+    /// <summary>
+    /// Referencia al Transform del jugador que la cámara debe seguir.
+    /// La cámara rotará alrededor de este punto para la vista en primera persona.
+    /// </summary>
     public Transform player;
 
-    // Sensibilidad del ratón
+    /// <summary>
+    /// Factor de sensibilidad para el movimiento del ratón.
+    /// Valores más altos resultan en rotaciones más rápidas de la cámara.
+    /// </summary>
     public float mouseSensitivity = 100f;
 
-    // Ángulo de rotación vertical
+    /// <summary>
+    /// Almacena el ángulo actual de rotación vertical de la cámara.
+    /// Se utiliza para limitar el rango de movimiento vertical y evitar giros completos.
+    /// </summary>
     private float xRotation = 0f;
 
     /// <summary>
-    /// Inicializa la cámara y configura el cursor
+    /// Inicializa la configuración de la cámara.
+    /// Oculta y bloquea el cursor en el centro de la pantalla para mejor control.
     /// </summary>
     void Start()
     {
-        // Ocultar y bloquear el cursor en el centro de la pantalla
         Cursor.lockState = CursorLockMode.Locked;
     }
 
     /// <summary>
-    /// Actualización principal del comportamiento de la cámara
+    /// Se mantiene vacío pero se conserva para posibles implementaciones futuras
+    /// de lógica que necesite ejecutarse en cada frame antes de LateUpdate.
     /// </summary>
     void Update()
     {
@@ -42,23 +44,23 @@ public class CameraController : MonoBehaviour
     }
 
     /// <summary>
-    /// Actualiza la rotación de la cámara basada en el input del ratón
-    /// Se ejecuta después de Update para asegurar movimientos suaves
+    /// Actualiza la rotación de la cámara después de que todos los Updates han sido llamados.
+    /// Procesa la entrada del ratón y aplica las rotaciones correspondientes a la cámara y al jugador.
     /// </summary>
     private void LateUpdate()
     {
-        // Obtener entrada del ratón
+        // Calcular la rotación basada en el movimiento del ratón
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-        // Rotar la cámara verticalmente (limitando para que no gire completamente)
+        // Actualizar y limitar la rotación vertical
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        // Aplicar rotación a la cámara
+        // Aplicar la rotación vertical a la cámara
         transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-        // Rotar el jugador horizontalmente
+        // Aplicar la rotación horizontal al jugador
         player.Rotate(Vector3.up * mouseX);
     }
 }
