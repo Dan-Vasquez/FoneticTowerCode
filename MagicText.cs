@@ -525,14 +525,7 @@ public class MagicText : MonoBehaviour
         int indiceAleatorio = Random.Range(0, objetosCoincidentes.Count);
         ObjetoInteractivo objetoSeleccionado = objetosCoincidentes[indiceAleatorio];
 
-        if (nivelActual == 1)
-        {
-            objetoSeleccionado.AplicarParpadeoMultiple(contadorPulsaciones, 0.5f);
-        }
-        else
-        {
-            objetoSeleccionado.AplicarOutline();
-        }
+        objetoSeleccionado.AplicarOutline();
 
         ultimoObjetoIluminado = objetoSeleccionado;
         Debug.Log($"Objeto final seleccionado: '{objetoSeleccionado.nombreObjeto}' iluminado");

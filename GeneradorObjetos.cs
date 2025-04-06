@@ -23,7 +23,6 @@ public class GeneradorObjetos : MonoBehaviour
     [Header("Configuración del Objeto Interactivo")]
     public int categoria;
     public string nombreObjeto;
-    public GameObject modeloVisual;
     
     // Configuración del generador
     [Header("Configuración de Generación")]
@@ -96,31 +95,9 @@ public class GeneradorObjetos : MonoBehaviour
             Debug.Log("Se ha añadido el componente ObjetoInteractivo al objeto generado");
         }
         
-        // Configurar el ObjetoInteractivo (ahora estamos seguros de que existe)
+        // Configurar el ObjetoInteractivo
         interactivo.categoria = this.categoria;
         interactivo.nombreObjeto = this.nombreObjeto;
-        
-        // Si se especificó un modelo visual, configurarlo
-        if (this.modeloVisual != null)
-        {
-            // Intentar encontrar un objeto hijo con el mismo nombre
-            Transform childModel = nuevoObjeto.transform.Find(this.modeloVisual.name);
-            if (childModel != null)
-            {
-                interactivo.modeloVisual = childModel.gameObject;
-            }
-            else
-            {
-                // Si no encuentra un hijo con ese nombre, asignar el objeto completo
-                interactivo.modeloVisual = nuevoObjeto;
-                Debug.Log("No se encontró un modelo visual específico. Se asignó el objeto completo como modelo visual.");
-            }
-        }
-        else
-        {
-            // Si no se especificó modelo, usar el objeto completo
-            interactivo.modeloVisual = nuevoObjeto;
-        }
         
         // Añadir a la lista de objetos generados
         objetosGenerados.Add(nuevoObjeto);
