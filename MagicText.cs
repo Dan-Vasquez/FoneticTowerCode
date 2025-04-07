@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.UI;
 
 public class MagicText : MonoBehaviour
 {
@@ -25,6 +26,7 @@ public class MagicText : MonoBehaviour
     [Header("Interfaz")]
     public TextMeshProUGUI nivelTexto;
     public GameObject panelSeleccionNivel;
+    public List<Button> botonesNivel = new List<Button>(); // Lista para los botones de nivel
     #endregion
     
     #region Constantes
@@ -156,6 +158,9 @@ public class MagicText : MonoBehaviour
         {
             particleSystem.Stop();
         }
+        
+        // Asignar eventos a los botones de nivel
+        ConfigurarBotonesNivel();
     }
     
     private void EncontrarObjetosInteractivos()
@@ -232,6 +237,31 @@ public class MagicText : MonoBehaviour
             ejemplos = new List<string>()
         };
         nivelesDificultad.Add(nivel7);
+    }
+    
+    private void ConfigurarBotonesNivel()
+    {
+        // Verificar que tenemos botones asignados
+        if (botonesNivel.Count == 0)
+        {
+            Debug.LogWarning("No hay botones de nivel asignados en el inspector.");
+            return;
+        }
+        
+        // Asignar la función para cambiar nivel a cada botón
+        for (int i = 0; i < botonesNivel.Count; i++)
+        {
+            if (botonesNivel[i] != null)
+            {
+                int nivelIndex = i; // Guardar el índice en una variable local para usar en la lambda
+                botonesNivel[i].onClick.AddListener(() => CambiarNivel(nivelIndex));
+                Debug.Log($"Botón de nivel {i+1} configurado correctamente");
+            }
+            else
+            {
+                Debug.LogWarning($"El botón de nivel en el índice {i} es nulo");
+            }
+        }
     }
     #endregion
     
@@ -414,6 +444,12 @@ public class MagicText : MonoBehaviour
             nivelActual = nuevoNivel;
             ActualizarTextoNivel();
             Debug.Log($"Nivel cambiado a: {nivelesDificultad[nivelActual].nombre}");
+            
+            // Si el panel está activo, ocultarlo al seleccionar un nivel
+            if (panelSeleccionNivel != null && panelSeleccionNivel.activeSelf)
+            {
+                panelSeleccionNivel.SetActive(false);
+            }
         }
     }
 
