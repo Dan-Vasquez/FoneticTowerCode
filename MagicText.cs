@@ -27,10 +27,16 @@ public class MagicText : MonoBehaviour
     public TextMeshProUGUI nivelTexto;
     public GameObject panelSeleccionNivel;
     public List<Button> botonesNivel = new List<Button>(); // Lista para los botones de nivel
+    
+    [Header("Audio Feedback")]
+    public AudioSource audioSource; // Referencia al componente de audio
+    public AudioClip successSound; // Sonido para aciertos
+    public AudioClip errorSound; // Sonido para errores
     #endregion
     
     #region Constantes
     private const int OUTLINE_LAYER = 6;
+    private const int MAX_NIVELES = 7;
     #endregion
     
     #region Diccionarios y Datos
@@ -83,6 +89,10 @@ public class MagicText : MonoBehaviour
         "ALEGRÍA",
         "MIEDO"
     };
+    
+    // Contadores de aciertos y errores por nivel
+    private int[] contadorAciertos;
+    private int[] contadorErrores;
     #endregion
     
     #region Estado del Juego
@@ -121,6 +131,10 @@ public class MagicText : MonoBehaviour
     private int indiceNivel6Actual = 0;
     private int indiceNivel6Resaltado = 0;
     private List<string> silabasNivel6Mostradas = new List<string>();
+    
+    // Usuario actual
+    private string usuarioActualID = "";
+    private bool usuarioLogueado = false;
     #endregion
     
     #region Clases y Estructuras
@@ -150,6 +164,10 @@ public class MagicText : MonoBehaviour
             InicializarNivelesDificultad();
         }
         
+        // Inicializar contadores de aciertos y errores
+        contadorAciertos = new int[MAX_NIVELES];
+        contadorErrores = new int[MAX_NIVELES];
+        
         // Actualizar UI
         ActualizarTextoNivel();
         
@@ -161,6 +179,9 @@ public class MagicText : MonoBehaviour
         
         // Asignar eventos a los botones de nivel
         ConfigurarBotonesNivel();
+        
+        // Cargar usuario si está disponible
+        CargarUsuarioActual();
     }
     
     private void EncontrarObjetosInteractivos()
@@ -263,6 +284,64 @@ public class MagicText : MonoBehaviour
             }
         }
     }
+    
+    private void CargarUsuarioActual()
+    {
+        // Intentar obtener el ID de usuario del sistema de usuario
+        string usuarioID = UserManager.Instance?.GetUsuarioActualID();
+        
+        if (!string.IsNullOrEmpty(usuarioID))
+        {
+            EstablecerUsuarioActual(usuarioID);
+        }
+        else
+        {
+            Debug.Log("No hay usuario logueado actualmente");
+        }
+    }
+    
+    public void EstablecerUsuarioActual(string id)
+    {
+        usuarioActualID = id;
+        usuarioLogueado = true;
+        Debug.Log($"Usuario establecido: {usuarioActualID}");
+        
+        // Cargar estadísticas previas del usuario si existen
+        CargarEstadisticasUsuario();
+    }
+    
+    private void CargarEstadisticasUsuario()
+    {
+        if (!usuarioLogueado || string.IsNullOrEmpty(usuarioActualID))
+            return;
+            
+        // Aquí podríamos cargar las estadísticas desde UserManager
+        UserStatistics stats = UserManager.Instance?.GetUserStatistics(usuarioActualID);
+        
+        if (stats != null)
+        {
+            // Cargar contadores desde las estadísticas
+            contadorAciertos = stats.aciertos;
+            contadorErrores = stats.errores;
+            Debug.Log("Estadísticas de usuario cargadas correctamente");
+        }
+        else
+        {
+            // Inicializar nuevos contadores
+            contadorAciertos = new int[MAX_NIVELES];
+            contadorErrores = new int[MAX_NIVELES];
+            Debug.Log("No se encontraron estadísticas previas, se inicializaron nuevas");
+        }
+    }
+    
+    private void GuardarEstadisticasUsuario()
+    {
+        if (!usuarioLogueado || string.IsNullOrEmpty(usuarioActualID))
+            return;
+        
+        UserManager.Instance?.UpdateUserStatistics(usuarioActualID, contadorAciertos, contadorErrores);
+        Debug.Log("Estadísticas de usuario guardadas correctamente");
+    }
     #endregion
     
     #region Actualización
@@ -290,11 +369,8 @@ public class MagicText : MonoBehaviour
             AplicarEfectoOndulacion();
             OrientarTextoHaciaJugador();
             
-            // Procesar reducción del contador con Q
-            if (Input.GetKeyDown(KeyCode.Q))
-            {
-                ProcesarTeclaQ();
-            }
+            // Procesar feedback del usuario
+            ProcesarFeedbackUsuario();
         }
         
         // Eliminar objetos con F
@@ -313,6 +389,112 @@ public class MagicText : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha5)) CambiarNivel(4);
         if (Input.GetKeyDown(KeyCode.Alpha6)) CambiarNivel(5);
         if (Input.GetKeyDown(KeyCode.Alpha7)) CambiarNivel(6);
+    }
+    
+    private void ProcesarFeedbackUsuario()
+    {
+        // Tecla Z: Error - Reducir contador y registrar error
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            RegistrarError();
+        }
+        
+        // Tecla X: Acierto - Reducir contador y registrar acierto
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            RegistrarAcierto();
+        }
+    }
+    
+    private void RegistrarError()
+    {
+        // Reproducir sonido de error
+        if (audioSource != null && errorSound != null)
+        {
+            audioSource.PlayOneShot(errorSound);
+        }
+        
+        // Registrar error en el nivel actual
+        if (nivelActual < contadorErrores.Length)
+        {
+            contadorErrores[nivelActual]++;
+            Debug.Log($"Error registrado en nivel {nivelActual + 1}. Total errores: {contadorErrores[nivelActual]}");
+        }
+        
+        // Guardar estadísticas si hay usuario logueado
+        if (usuarioLogueado)
+        {
+            GuardarEstadisticasUsuario();
+        }
+        
+        // Reducir contador de pulsaciones
+        contadorPulsaciones--;
+        Debug.Log("Contador: " + contadorPulsaciones);
+        
+        // Procesar acción por nivel
+        ProcesarAccionPorNivel();
+        ActualizarTextoContador();
+        
+        // Verificar si finalizar animación
+        VerificarFinalizacionAnimacion();
+    }
+    
+    private void RegistrarAcierto()
+    {
+        // Reproducir sonido de acierto
+        if (audioSource != null && successSound != null)
+        {
+            audioSource.PlayOneShot(successSound);
+        }
+        
+        // Registrar acierto en el nivel actual
+        if (nivelActual < contadorAciertos.Length)
+        {
+            contadorAciertos[nivelActual]++;
+            Debug.Log($"Acierto registrado en nivel {nivelActual + 1}. Total aciertos: {contadorAciertos[nivelActual]}");
+        }
+        
+        // Guardar estadísticas si hay usuario logueado
+        if (usuarioLogueado)
+        {
+            GuardarEstadisticasUsuario();
+        }
+        
+        // Reducir contador de pulsaciones
+        contadorPulsaciones--;
+        Debug.Log("Contador: " + contadorPulsaciones);
+        
+        // Procesar acción por nivel
+        ProcesarAccionPorNivel();
+        ActualizarTextoContador();
+        
+        // Verificar si finalizar animación
+        VerificarFinalizacionAnimacion();
+    }
+    
+    private void VerificarFinalizacionAnimacion()
+    {
+        // Si el contador llega a cero, cambiar layer del objeto
+        if (contadorPulsaciones == 0)
+        {
+            if (ultimoObjetoIluminado == null)
+            {
+                CambiarLayerObjeto();
+            }
+        }
+        // Si el contador es negativo, finalizar animación si no hay objetos en Outline
+        else if (contadorPulsaciones < 0)
+        {
+            if (!ExistenObjetosEnLayerOutline())
+            {
+                Invoke("EndAnimation", 0);
+                isAnimating = false;
+            }
+            else
+            {
+                Debug.Log("No se puede finalizar la animación porque aún existen objetos en el layer Outline");
+            }
+        }
     }
     
     private void AplicarEfectoEscritura()
@@ -354,37 +536,6 @@ public class MagicText : MonoBehaviour
             {
                 Quaternion lookRotation = Quaternion.LookRotation(-directionToPlayer);
                 floatingText.transform.rotation = lookRotation;
-            }
-        }
-    }
-    
-    private void ProcesarTeclaQ()
-    {
-        contadorPulsaciones--;
-        Debug.Log("Contador: " + contadorPulsaciones);
-        
-        ProcesarAccionPorNivel();
-        ActualizarTextoContador();
-        
-        // Verificar si finalizar animación
-        if (contadorPulsaciones == 0)
-        {
-            if (ultimoObjetoIluminado == null)
-            {
-                CambiarLayerObjeto();
-            }
-        }
-        else if (contadorPulsaciones < 0)
-        {
-            // Finalizar si no hay objetos en Outline
-            if (!ExistenObjetosEnLayerOutline())
-            {
-                Invoke("EndAnimation", 0);
-                isAnimating = false;
-            }
-            else
-            {
-                Debug.Log("No se puede finalizar la animación porque aún existen objetos en el layer Outline");
             }
         }
     }
@@ -460,6 +611,19 @@ public class MagicText : MonoBehaviour
             nivelTexto.text = $"{nivelesDificultad[nivelActual].nombre}\n" +
                               $"{nivelesDificultad[nivelActual].descripcion}";
         }
+    }
+    
+    // Método para mostrar estadísticas actuales
+    public string ObtenerEstadisticasActuales()
+    {
+        string estadisticas = "Estadísticas del usuario:\n";
+        
+        for (int i = 0; i < MAX_NIVELES && i < nivelesDificultad.Count; i++)
+        {
+            estadisticas += $"Nivel {i+1}: Aciertos {contadorAciertos[i]}, Errores {contadorErrores[i]}\n";
+        }
+        
+        return estadisticas;
     }
     #endregion
 
