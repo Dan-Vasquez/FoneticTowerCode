@@ -180,8 +180,10 @@ public class MagicText : MonoBehaviour
         // Asignar eventos a los botones de nivel
         ConfigurarBotonesNivel();
         
-        // Cargar usuario si está disponible
-        CargarUsuarioActual();
+        // En lugar de cargar automáticamente el último usuario, solo inicializamos las variables
+        usuarioActualID = "";
+        usuarioLogueado = false;
+        Debug.Log("Iniciando juego sin usuario activo. Regístrese o inicie sesión para guardar estadísticas.");
     }
     
     private void EncontrarObjetosInteractivos()
@@ -393,16 +395,101 @@ public class MagicText : MonoBehaviour
     
     private void ProcesarFeedbackUsuario()
     {
-        // Tecla Z: Error - Reducir contador y registrar error
-        if (Input.GetKeyDown(KeyCode.Z))
+        // Verificar si hay objetos en layer OUTLINE_LAYER (6)
+        /*
+        if (ExistenObjetosEnLayerOutline())
         {
-            RegistrarError();
+            // Si hay objetos en outline, deshabilitamos el registro de aciertos/errores
+            Debug.Log("Objeto en outline detectado. Feedback deshabilitado temporalmente.");
+            return;
+        }*/
+        
+        // Verificar que existe un usuario activo
+        if (!usuarioLogueado || string.IsNullOrEmpty(usuarioActualID))
+        {
+            // Si no hay usuario logueado, solo registraremos en los contadores locales
+            // Tecla Z: Error 
+            if (Input.GetKeyDown(KeyCode.Z))
+            {
+                RegistrarError();
+                Debug.LogWarning("Se registró un error, pero no se guardará en la base de datos porque no hay usuario activo.");
+            }
+            
+            // Tecla X: Acierto
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                RegistrarAcierto();
+                Debug.LogWarning("Se registró un acierto, pero no se guardará en la base de datos porque no hay usuario activo.");
+            }
+            
+            return;
         }
         
-        // Tecla X: Acierto - Reducir contador y registrar acierto
+        // Verificar que UserManager esté disponible
+        if (UserManager.Instance == null)
+        {
+            Debug.LogError("No se puede acceder a UserManager para guardar estadísticas. Asegúrate de que existe en la escena.");
+            
+            // Registrar localmente incluso si no podemos guardar
+            if (Input.GetKeyDown(KeyCode.Z))
+            {
+                RegistrarError();
+            }
+            
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                RegistrarAcierto();
+            }
+            
+            return;
+        }
+        
+        // Tenemos usuario activo y UserManager, podemos proceder con seguridad
+        
+        // Tecla Z: Error - Registrar error y actualizar en la base de datos
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            // Verificar que el nivel actual es válido
+            if (nivelActual >= 0 && nivelActual < MAX_NIVELES)
+            {
+                // Incrementar contador de errores para este nivel
+                contadorErrores[nivelActual]++;
+                Debug.Log($"Error registrado en nivel {nivelActual + 1}. Total errores: {contadorErrores[nivelActual]}");
+                
+                // Guardar inmediatamente en la base de datos
+                UserManager.Instance.UpdateUserStatistics(usuarioActualID, contadorAciertos, contadorErrores);
+                Debug.Log($"Estadísticas actualizadas en la base de datos para usuario {usuarioActualID}");
+                
+                // Llamar a la función original de registro de error para el resto de la lógica
+                RegistrarError();
+            }
+            else
+            {
+                Debug.LogError($"Nivel actual {nivelActual} fuera de rango válido (0-{MAX_NIVELES-1})");
+            }
+        }
+        
+        // Tecla X: Acierto - Registrar acierto y actualizar en la base de datos
         if (Input.GetKeyDown(KeyCode.X))
         {
-            RegistrarAcierto();
+            // Verificar que el nivel actual es válido
+            if (nivelActual >= 0 && nivelActual < MAX_NIVELES)
+            {
+                // Incrementar contador de aciertos para este nivel
+                contadorAciertos[nivelActual]++;
+                Debug.Log($"Acierto registrado en nivel {nivelActual + 1}. Total aciertos: {contadorAciertos[nivelActual]}");
+                
+                // Guardar inmediatamente en la base de datos
+                UserManager.Instance.UpdateUserStatistics(usuarioActualID, contadorAciertos, contadorErrores);
+                Debug.Log($"Estadísticas actualizadas en la base de datos para usuario {usuarioActualID}");
+                
+                // Llamar a la función original de registro de acierto para el resto de la lógica
+                RegistrarAcierto();
+            }
+            else
+            {
+                Debug.LogError($"Nivel actual {nivelActual} fuera de rango válido (0-{MAX_NIVELES-1})");
+            }
         }
     }
     
@@ -412,19 +499,6 @@ public class MagicText : MonoBehaviour
         if (audioSource != null && errorSound != null)
         {
             audioSource.PlayOneShot(errorSound);
-        }
-        
-        // Registrar error en el nivel actual
-        if (nivelActual < contadorErrores.Length)
-        {
-            contadorErrores[nivelActual]++;
-            Debug.Log($"Error registrado en nivel {nivelActual + 1}. Total errores: {contadorErrores[nivelActual]}");
-        }
-        
-        // Guardar estadísticas si hay usuario logueado
-        if (usuarioLogueado)
-        {
-            GuardarEstadisticasUsuario();
         }
         
         // Reducir contador de pulsaciones
@@ -445,19 +519,6 @@ public class MagicText : MonoBehaviour
         if (audioSource != null && successSound != null)
         {
             audioSource.PlayOneShot(successSound);
-        }
-        
-        // Registrar acierto en el nivel actual
-        if (nivelActual < contadorAciertos.Length)
-        {
-            contadorAciertos[nivelActual]++;
-            Debug.Log($"Acierto registrado en nivel {nivelActual + 1}. Total aciertos: {contadorAciertos[nivelActual]}");
-        }
-        
-        // Guardar estadísticas si hay usuario logueado
-        if (usuarioLogueado)
-        {
-            GuardarEstadisticasUsuario();
         }
         
         // Reducir contador de pulsaciones
@@ -1405,7 +1466,7 @@ public class MagicText : MonoBehaviour
                 break;
                 
             case 4: // Nivel 5: Sílaba con tamaños variables
-                fullText = textoBase; // Sin indicadores de tamaño
+                fullText = textoBase;
                 break;
                 
             case 5: // Nivel 6: Sílabas progresivas
