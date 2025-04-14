@@ -31,7 +31,7 @@ public class CameraController : MonoBehaviour
     /// </summary>
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.lockState = CursorLockMode.Locked;
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public class CameraController : MonoBehaviour
     /// </summary>
     void Update()
     {
-        
+
     }
 
     /// <summary>

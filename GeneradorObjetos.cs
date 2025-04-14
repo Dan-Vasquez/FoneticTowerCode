@@ -1,68 +1,68 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
+
 /// Controla la generación automática de objetos interactivos en puntos específicos del espacio.
 /// Este componente permite generar objetos de forma periódica hasta alcanzar una cantidad máxima definida.
-/// </summary>
+
 public class GeneradorObjetos : MonoBehaviour
 {
-    /// <summary>
+    
     /// Prefab base que será instanciado en los puntos de generación.
     /// Este prefab debe contener o ser compatible con el componente ObjetoInteractivo.
-    /// </summary>
+    
     public GameObject prefabBase;
     
     // Configuración del ObjetoInteractivo
     [Header("Configuración del Objeto Interactivo")]
-    /// <summary>
+    
     /// Categoría del objeto interactivo que se generará.
-    /// </summary>
+    
     public int categoria;
 
-    /// <summary>
+    
     /// Nombre identificativo del objeto que se generará.
-    /// </summary>
+    
     public string nombreObjeto;
     
     // Configuración del generador
     [Header("Configuración de Generación")]
-    /// <summary>
+    
     /// Número máximo de objetos que pueden existir simultáneamente.
-    /// </summary>
+    
     public int cantidadMaxima = 3;
 
-    /// <summary>
+    
     /// Array de transforms que definen las posiciones donde se pueden generar objetos.
-    /// </summary>
+    
     public Transform[] puntosDeGeneracion;
 
-    /// <summary>
+    
     /// Tiempo en segundos entre cada intento de generación de objetos.
-    /// </summary>
+    
     public float tiempoEntreGeneraciones = 5f;
     
-    /// <summary>
+    
     /// Lista que mantiene el registro de todos los objetos generados actualmente.
-    /// </summary>
+    
     private List<GameObject> objetosGenerados = new List<GameObject>();
 
-    /// <summary>
+    
     /// Contador interno para controlar el tiempo entre generaciones.
-    /// </summary>
+    
     private float temporizador;
     
-    /// <summary>
+    
     /// Inicializa el temporizador al comenzar.
-    /// </summary>
+    
     void Start()
     {
         temporizador = tiempoEntreGeneraciones;
     }
     
-    /// <summary>
+    
     /// Actualiza el estado del generador cada frame, controlando la generación automática de objetos.
-    /// </summary>
+    
     void Update()
     {
         // Limpiar la lista de objetos que ya no existen
@@ -81,9 +81,9 @@ public class GeneradorObjetos : MonoBehaviour
         }
     }
     
-    /// <summary>
+    
     /// Genera un nuevo objeto si no se ha alcanzado el límite máximo.
-    /// </summary>
+    
     public void GenerarObjeto()
     {
         // Verificar si hemos alcanzado el límite
@@ -109,7 +109,7 @@ public class GeneradorObjetos : MonoBehaviour
         {
             // Si no tiene el componente, añadirlo
             interactivo = nuevoObjeto.AddComponent<ObjetoInteractivo>();
-            Debug.Log("Se ha añadido el componente ObjetoInteractivo al objeto generado");
+            //Debug.Log("Se ha añadido el componente ObjetoInteractivo al objeto generado");
         }
         
         // Configurar el ObjetoInteractivo (ahora estamos seguros de que existe)
@@ -119,12 +119,12 @@ public class GeneradorObjetos : MonoBehaviour
         // Añadir a la lista de objetos generados
         objetosGenerados.Add(nuevoObjeto);
         
-        Debug.Log($"Objeto {nombreObjeto} generado con éxito. Total actual: {objetosGenerados.Count}");
+        //Debug.Log($"Objeto {nombreObjeto} generado con éxito. Total actual: {objetosGenerados.Count}");
     }
     
-    /// <summary>
+    
     /// Genera objetos hasta alcanzar el límite máximo establecido.
-    /// </summary>
+    
     public void GenerarHastaLimite()
     {
         while (objetosGenerados.Count < cantidadMaxima)
@@ -133,9 +133,9 @@ public class GeneradorObjetos : MonoBehaviour
         }
     }
     
-    /// <summary>
+    
     /// Destruye todos los objetos generados y limpia la lista.
-    /// </summary>
+    
     public void LimpiarObjetos()
     {
         foreach (GameObject obj in objetosGenerados)
