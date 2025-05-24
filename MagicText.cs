@@ -2,6 +2,8 @@
 using TMPro;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using UnityEngine.XR;
+using System.Linq;
 
 public class MagicText : MonoBehaviour
 {
@@ -25,6 +27,7 @@ public class MagicText : MonoBehaviour
     
     [Header("Interfaz")]
     public TextMeshProUGUI nivelTexto;
+    public TextMeshProUGUI nivelSimpleTexto;
     public GameObject panelSeleccionNivel;
     public List<Button> botonesNivel = new List<Button>(); // Lista para los botones de nivel
     
@@ -135,6 +138,31 @@ public class MagicText : MonoBehaviour
     // Usuario actual
     private string usuarioActualID = "";
     private bool usuarioLogueado = false;
+    
+    // Variables para almacenar los controladores
+    private InputDevice rightController;
+    private InputDevice leftController;
+    
+    // Variables para rastrear estados previos
+    private bool prevXButtonState = false;
+    private bool prevYButtonState = false;
+    private bool prevAButtonState = false;
+    private bool prevBButtonState = false;
+    private bool prevTriggerLeftState = false;
+    private bool prevTriggerRightState = false;
+    private bool prevGripLeftState = false;
+    private bool prevGripRightState = false;
+    
+    // Variables para el cooldown de botones
+    private bool xButtonCooldown = false;
+    private bool yButtonCooldown = false;
+    private bool triggerLeftCooldown = false;
+    private bool gripLeftCooldown = false;
+    private float xButtonCooldownTime = 0f;
+    private float yButtonCooldownTime = 0f;
+    private float triggerLeftCooldownTime = 0f;
+    private float gripLeftCooldownTime = 0f;
+    private float cooldownDuration = 1f; // Duración del cooldown en segundos
     #endregion
     
     #region Clases y Estructuras
@@ -184,6 +212,9 @@ public class MagicText : MonoBehaviour
         usuarioActualID = "";
         usuarioLogueado = false;
         Debug.Log("Iniciando juego sin usuario activo. Regístrese o inicie sesión para guardar estadísticas.");
+        
+        // En Start() o Awake(), busca los controladores
+        BuscarControladores();
     }
     
     private void EncontrarObjetosInteractivos()
@@ -344,6 +375,59 @@ public class MagicText : MonoBehaviour
         UserManager.Instance?.UpdateUserStatistics(usuarioActualID, contadorAciertos, contadorErrores);
         Debug.Log("Estadísticas de usuario guardadas correctamente");
     }
+    
+    private void BuscarControladores()
+    {
+        Debug.Log("Buscando controladores VR...");
+        List<InputDevice> dispositivos = new List<InputDevice>();
+        
+        // Intento 1: Buscar por características específicas
+        dispositivos.Clear();
+        InputDeviceCharacteristics caracteristicasDerecho = InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.Right;
+        InputDevices.GetDevicesWithCharacteristics(caracteristicasDerecho, dispositivos);
+        if (dispositivos.Count > 0)
+        {
+            rightController = dispositivos[0];
+            //Debug.Log($"Controlador derecho encontrado (Método 1): {rightController.name}");
+        }
+        
+        dispositivos.Clear();
+        InputDeviceCharacteristics caracteristicasIzquierdo = InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.Left;
+        InputDevices.GetDevicesWithCharacteristics(caracteristicasIzquierdo, dispositivos);
+        if (dispositivos.Count > 0)
+        {
+            leftController = dispositivos[0];
+            //Debug.Log($"Controlador izquierdo encontrado (Método 1): {leftController.name}");
+        }
+        
+        // Intento 2: Si no funciona, intentar buscar por nombre
+        if (!rightController.isValid || !leftController.isValid)
+        {
+            dispositivos.Clear();
+            InputDevices.GetDevices(dispositivos);
+            
+            foreach (var device in dispositivos)
+            {
+                string nombre = device.name.ToLower();
+                
+                // Buscar términos como "right", "derecho", "oculus touch", etc.
+                if (!rightController.isValid && (nombre.Contains("right") || nombre.Contains("derecho")))
+                {
+                    rightController = device;
+                    //Debug.Log($"Controlador derecho encontrado (por nombre): {rightController.name}");
+                }
+                else if (!leftController.isValid && (nombre.Contains("left") || nombre.Contains("izquierdo")))
+                {
+                    leftController = device;
+                    //Debug.Log($"Controlador izquierdo encontrado (por nombre): {leftController.name}");
+                }
+            }
+        }
+        
+        // Verificación final
+        //Debug.Log($"Estado final - Controlador derecho: {(rightController.isValid ? "VÁLIDO" : "NO VÁLIDO")}");
+        //Debug.Log($"Estado final - Controlador izquierdo: {(leftController.isValid ? "VÁLIDO" : "NO VÁLIDO")}");
+    }
     #endregion
     
     #region Actualización
@@ -380,6 +464,49 @@ public class MagicText : MonoBehaviour
         {
             EliminarObjetosEnLayerOutline();
         }
+        
+        // Actualizar cooldowns de botones
+        ActualizarCooldowns();
+        
+        // Para el controlador izquierdo
+        
+        if (leftController.isValid)
+        {
+            // Probar todos los botones posibles
+            bool primaryButtonPressed = false;
+            bool secondaryButtonPressed = false;
+            bool triggerButtonPressed = false;
+            bool gripButtonPressed = false;
+                        
+            // Gatillo -> Eliminar objetos (igual que KeyCode.F)
+            if (leftController.TryGetFeatureValue(CommonUsages.triggerButton, out triggerButtonPressed) && 
+                triggerButtonPressed && !prevTriggerLeftState && !triggerLeftCooldown)
+            {
+                EliminarObjetosEnLayerOutline();
+                Debug.Log("¡GATILLO IZQUIERDO PRESIONADO! Eliminando objetos en layer outline");
+                triggerLeftCooldown = true;
+                triggerLeftCooldownTime = cooldownDuration;
+            }
+            
+            // Grip -> Iniciar animación (igual que KeyCode.E)
+            if (leftController.TryGetFeatureValue(CommonUsages.gripButton, out gripButtonPressed) && 
+                gripButtonPressed && !prevGripLeftState && !gripLeftCooldown)
+            {
+                if (!isAnimating) {
+                    StartAnimation();
+                    Debug.Log("¡GRIP IZQUIERDO PRESIONADO! Iniciando animación");
+                    gripLeftCooldown = true;
+                    gripLeftCooldownTime = cooldownDuration;
+                }
+            }
+            
+            // Actualizar estados previos
+            prevXButtonState = primaryButtonPressed;
+            prevYButtonState = secondaryButtonPressed;
+            prevTriggerLeftState = triggerButtonPressed;
+            prevGripLeftState = gripButtonPressed;
+        }
+        
     }
     
     private void ProcesarTeclasNivel()
@@ -396,13 +523,12 @@ public class MagicText : MonoBehaviour
     private void ProcesarFeedbackUsuario()
     {
         // Verificar si hay objetos en layer OUTLINE_LAYER (6)
-        /*
         if (ExistenObjetosEnLayerOutline())
         {
             // Si hay objetos en outline, deshabilitamos el registro de aciertos/errores
-            Debug.Log("Objeto en outline detectado. Feedback deshabilitado temporalmente.");
+            //Debug.Log("Objeto en outline detectado. Feedback deshabilitado temporalmente.");
             return;
-        }*/
+        }
         
         // Verificar que existe un usuario activo
         if (!usuarioLogueado || string.IsNullOrEmpty(usuarioActualID))
@@ -414,14 +540,47 @@ public class MagicText : MonoBehaviour
                 RegistrarError();
                 Debug.LogWarning("Se registró un error, pero no se guardará en la base de datos porque no hay usuario activo.");
             }
-            
+
             // Tecla X: Acierto
             if (Input.GetKeyDown(KeyCode.X))
             {
                 RegistrarAcierto();
                 Debug.LogWarning("Se registró un acierto, pero no se guardará en la base de datos porque no hay usuario activo.");
-            }
-            
+            }     
+
+            // Para el controlador izquierdo
+
+            if (leftController.isValid)
+            {
+                // Probar todos los botones posibles
+                bool primaryButtonPressed = false;
+                bool secondaryButtonPressed = false;
+                
+                // Botón X (primario) -> Registrar acierto (igual que KeyCode.X)
+                if (leftController.TryGetFeatureValue(CommonUsages.primaryButton, out primaryButtonPressed) && 
+                    primaryButtonPressed && !prevXButtonState && !xButtonCooldown)
+                {
+                    RegistrarAcierto();
+                    Debug.Log("¡BOTÓN X PRESIONADO! Se registró acierto desde controlador izquierdo");
+                    xButtonCooldown = true;
+                    xButtonCooldownTime = cooldownDuration;
+                }
+                
+                // Botón Y (secundario) -> Registrar error (igual que KeyCode.Z)
+                if (leftController.TryGetFeatureValue(CommonUsages.secondaryButton, out secondaryButtonPressed) && 
+                    secondaryButtonPressed && !prevYButtonState && !yButtonCooldown)
+                {
+                    RegistrarError();
+                    Debug.Log("¡BOTÓN Y PRESIONADO! Se registró error desde controlador izquierdo");
+                    yButtonCooldown = true;
+                    yButtonCooldownTime = cooldownDuration;
+                }
+                
+                // Actualizar estados previos
+                prevXButtonState = primaryButtonPressed;
+                prevYButtonState = secondaryButtonPressed;
+            }      
+
             return;
         }
         
@@ -656,12 +815,6 @@ public class MagicText : MonoBehaviour
             nivelActual = nuevoNivel;
             ActualizarTextoNivel();
             Debug.Log($"Nivel cambiado a: {nivelesDificultad[nivelActual].nombre}");
-            
-            // Si el panel está activo, ocultarlo al seleccionar un nivel
-            if (panelSeleccionNivel != null && panelSeleccionNivel.activeSelf)
-            {
-                panelSeleccionNivel.SetActive(false);
-            }
         }
     }
 
@@ -671,6 +824,12 @@ public class MagicText : MonoBehaviour
         {
             nivelTexto.text = $"{nivelesDificultad[nivelActual].nombre}\n" +
                               $"{nivelesDificultad[nivelActual].descripcion}";
+        }
+        
+        // Actualizar texto simplificado del nivel
+        if (nivelSimpleTexto != null)
+        {
+            nivelSimpleTexto.text = $"Nivel actual: {nivelActual + 1}";
         }
     }
     
@@ -715,6 +874,9 @@ public class MagicText : MonoBehaviour
             
             Destroy(objToDestroy);
             objetosEliminados++;
+
+            EndAnimation();
+            isAnimating = false;
             
             Debug.Log($"Objeto eliminado: {nombreObjeto}");
         }
@@ -731,6 +893,10 @@ public class MagicText : MonoBehaviour
                 particleSystem.Play();
                 Invoke("StopParticleSystem", 5f);
             }
+            
+            // Hacer desaparecer el texto flotante
+            EndAnimation();
+            isAnimating = false;
         }
         else
         {
@@ -788,7 +954,7 @@ public class MagicText : MonoBehaviour
                 objetosCoincidentes = BuscarObjetosPorConsonante(objetosActuales, textoBase);
                 break;
                 
-            case 3: // Nivel 4: Buscar objetos por palabras originales
+            case 3: // Nivel 4: Coincidencia con palabras originales
                 objetosCoincidentes = BuscarObjetosPorPalabrasOriginales(objetosActuales);
                 break;
                 
@@ -813,9 +979,18 @@ public class MagicText : MonoBehaviour
     
     private ObjetoInteractivo BuscarCoincidenciaExacta(List<ObjetoInteractivo> objetosActuales)
     {
+        // Si estamos en nivel 7 (índice 6) y trabajamos con una poción, extraer solo el nombre
+        string nombreBusqueda = palabraSeleccionada;
+        if (nivelActual == 6 && palabraSeleccionada.StartsWith("Poción de "))
+        {
+            nombreBusqueda = palabraSeleccionada.Substring(10).Trim(); // Extraer el nombre después de "Poción de "
+            Debug.Log($"Nivel 7: Buscando poción con nombre: {nombreBusqueda} en lugar de {palabraSeleccionada}");
+        }
+        
+        // Buscar coincidencia exacta con el nombre de búsqueda
         foreach (ObjetoInteractivo obj in objetosActuales)
         {
-            if (string.Equals(obj.nombreObjeto, palabraSeleccionada, System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(obj.nombreObjeto, nombreBusqueda, System.StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"¡Coincidencia exacta encontrada! {obj.nombreObjeto}");
                 return obj;
@@ -1331,35 +1506,23 @@ public class MagicText : MonoBehaviour
         silabasMezcladas.Clear();
         palabrasOriginalesMezcladas.Clear();
         
-        // Seleccionar 3 palabras diferentes
-        List<string> palabrasSeleccionadas = new List<string>();
-        palabrasSeleccionadas.Add(palabraSeleccionada); // Ya tenemos una
+        // Crear listas temporales que contengan todos los elementos disponibles
+        List<string> todasPalabras = new List<string>();
+        todasPalabras.AddRange(vegetales);
+        todasPalabras.AddRange(frutas);
+        todasPalabras.AddRange(pociones);
         
-        // Seleccionar otras dos aleatorias
-        for (int i = 0; i < 2; i++)
+        // Mezclar todas las palabras
+        for (int i = 0; i < todasPalabras.Count; i++)
         {
-            int categoriaTmp = Random.Range(0, 3);
-            string palabraTmp = "";
-            
-            switch (categoriaTmp)
-            {
-                case 0: // Vegetales
-                    palabraTmp = vegetales[Random.Range(0, vegetales.Length)];
-                    break;
-                case 1: // Frutas
-                    palabraTmp = frutas[Random.Range(0, frutas.Length)];
-                    break;
-                case 2: // Pociones
-                    palabraTmp = pociones[Random.Range(0, pociones.Length)];
-                    break;
-            }
-            
-            // Evitar repeticiones
-            if (!palabrasSeleccionadas.Contains(palabraTmp))
-                palabrasSeleccionadas.Add(palabraTmp);
-            else
-                i--; // Repetir
+            int j = Random.Range(i, todasPalabras.Count);
+            string temp = todasPalabras[i];
+            todasPalabras[i] = todasPalabras[j];
+            todasPalabras[j] = temp;
         }
+        
+        // Seleccionar las primeras 3 palabras de la lista mezclada
+        List<string> palabrasSeleccionadas = todasPalabras.Take(3).ToList();
         
         // Guardar palabras originales
         palabrasOriginalesMezcladas = new List<string>(palabrasSeleccionadas);
@@ -1383,7 +1546,7 @@ public class MagicText : MonoBehaviour
             }
         }
         
-        // Mezclar orden
+        // Mezclar orden de las sílabas
         for (int i = 0; i < silabasSeleccionadas.Count; i++)
         {
             int indiceAleatorio = Random.Range(i, silabasSeleccionadas.Count);
@@ -1707,4 +1870,74 @@ public class MagicText : MonoBehaviour
         }
     }
     #endregion
+
+    #region Añadir detección de controladores
+    void OnEnable()
+    {
+        InputDevices.deviceConnected += DeviceConnected;
+        InputDevices.deviceDisconnected += DeviceDisconnected;
+    }
+
+    void OnDisable()
+    {
+        InputDevices.deviceConnected -= DeviceConnected;
+        InputDevices.deviceDisconnected -= DeviceDisconnected;
+    }
+
+    private void DeviceConnected(InputDevice device)
+    {
+        Debug.Log($"Dispositivo conectado: {device.name}");
+        BuscarControladores(); // Actualizar referencias
+    }
+
+    private void DeviceDisconnected(InputDevice device)
+    {
+        Debug.Log($"Dispositivo desconectado: {device.name}");
+        BuscarControladores(); // Actualizar referencias
+    }
+    #endregion
+
+    private void ActualizarCooldowns()
+    {
+        // Actualizar cooldowns de botones
+        if (xButtonCooldown)
+        {
+            xButtonCooldownTime -= Time.deltaTime;
+            if (xButtonCooldownTime <= 0f)
+            {
+                xButtonCooldown = false;
+                Debug.Log("Botón X disponible nuevamente");
+            }
+        }
+        
+        if (yButtonCooldown)
+        {
+            yButtonCooldownTime -= Time.deltaTime;
+            if (yButtonCooldownTime <= 0f)
+            {
+                yButtonCooldown = false;
+                Debug.Log("Botón Y disponible nuevamente");
+            }
+        }
+        
+        if (triggerLeftCooldown)
+        {
+            triggerLeftCooldownTime -= Time.deltaTime;
+            if (triggerLeftCooldownTime <= 0f)
+            {
+                triggerLeftCooldown = false;
+                Debug.Log("Gatillo izquierdo disponible nuevamente");
+            }
+        }
+        
+        if (gripLeftCooldown)
+        {
+            gripLeftCooldownTime -= Time.deltaTime;
+            if (gripLeftCooldownTime <= 0f)
+            {
+                gripLeftCooldown = false;
+                Debug.Log("Grip izquierdo disponible nuevamente");
+            }
+        }
+    }
 }
